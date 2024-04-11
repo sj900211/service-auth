@@ -1,0 +1,6 @@
+spring:
+  cloud:
+    config:
+      enabled: true
+  config:
+    import: configserver:https://staging.config.cloud.freshr.run

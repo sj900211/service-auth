@@ -1,0 +1,67 @@
+version: "3.7"
+name: test-auth
+services:
+  redis:
+    container_name: "test-auth-redis"
+    image: "redis:latest"
+    ports:
+      - "6379:6379"
+    command: redis-server --bind 0.0.0.0 --maxmemory 1GB --requirepass ${REDIS_PASSWORD}
+    volumes:
+      - redis:/data
+    networks:
+      - bridge
+
+  elasticsearch:
+    container_name: "test-auth-elasticsearch"
+    image: "elasticsearch:8.7.0"
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - ./env/elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro,Z
+    environment:
+      node.name: elasticsearch
+      ES_JAVA_OPTS: -Xms512m -Xmx512m
+      ELASTIC_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
+      discovery.type: single-node
+    networks:
+      - bridge
+
+  postgres:
+    container_name: "test-auth-postgres"
+    image: "postgres:latest"
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./env/postgres/init/:/docker-entrypoint-initdb.d/
+      - postgres:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USERNAME}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    command: postgres -c log_destination=stderr -c log_statement=all -c max_connections=500
+    extra_hosts:
+      - test-auth-gateway:host-gateway
+    networks:
+      - bridge
+
+  swagger:
+    container_name: "test-auth-swagger"
+    image: "swaggerapi/swagger-ui"
+    ports:
+      - "8080:8080"
+    environment:
+      - URLS=[
+        {name:'Auth', url:'http://localhost:50104/auth/openapi3.yaml'}
+        ]
+
+networks:
+  bridge:
+    name: test-auth
+    driver: bridge
+
+volumes:
+  redis:
+    name: test-auth-redis
+  postgres:
+    name: test-auth-postgres

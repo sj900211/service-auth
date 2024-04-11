@@ -1,0 +1,51 @@
+freshr:
+  utils:
+    encrypt-salt: ENCRYPT-AUTH
+    jwt-salt: JWT-AUTH
+  entity:
+    rsa-ttl: 300
+    access-ttl: 15552000
+    refresh-ttl: 15552000
+    access-expiration: 900
+
+server:
+  port: 50103
+
+spring:
+  docker:
+    compose:
+      enabled: true
+      file: classpath:docker/docker-compose.yml
+
+  jpa:
+    show-sql: true
+    database: postgresql
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        show_sql: false
+        format_sql: false
+        use_sql_comments: false
+
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password: redis-password
+
+  elasticsearch:
+    uris: http://localhost:9200
+    password: elasticsearch-password
+
+logging:
+  level:
+    root: info
+    p6spy: info

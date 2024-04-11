@@ -1,0 +1,218 @@
+import static org.springframework.util.StringUtils.hasLength
+
+plugins {
+  id 'java'
+  id 'java-library'
+  id 'org.springframework.boot' version '3.2.4'
+  id 'io.spring.dependency-management' version '1.1.4'
+  id 'com.epages.restdocs-api-spec' version "0.19.1"
+  id 'com.google.cloud.tools.jib' version '3.4.1'
+}
+
+group = 'run.freshr'
+version = '0.0.1-SNAPSHOT'
+
+java {
+  sourceCompatibility = '17'
+}
+
+configurations {
+  compileOnly {
+    extendsFrom annotationProcessor
+  }
+}
+
+repositories {
+  maven {
+    url "https://:${githubPackageRead}@maven.pkg.github.com/${githubOwner}/*"
+//    url "${nexusRepository}/maven-public/"
+  }
+  mavenCentral()
+}
+
+ext {
+  set('servicePath', "auth")
+  set('springCloudVersion', "2023.0.1")
+  set('snippetsDir', file("build/generated-snippets"))
+}
+
+// dependencyManagement 기능을 dependencies 에서 사용하기 위해서는 dependencies 보다 위에 작성해야한다.
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+  }
+}
+
+dependencies {
+  // Test
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+
+  // Eureka Client
+  implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+
+  // Cloud Config Client
+  implementation 'org.springframework.cloud:spring-cloud-starter-config'
+
+  // WEB
+  implementation 'org.springframework.boot:spring-boot-starter-web'
+
+  // Validation
+  implementation 'org.springframework.boot:spring-boot-starter-validation'
+
+  // Security
+  implementation 'org.springframework.boot:spring-boot-starter-security'
+  testImplementation 'org.springframework.security:spring-security-test'
+
+  // JWT: library-core-utils
+  implementation 'io.jsonwebtoken:jjwt-api:0.12.5'
+  runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.5'
+  runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.5'
+
+  // Configuration Processor
+  annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+
+  // LOMBOK
+  compileOnly 'org.projectlombok:lombok'
+  annotationProcessor 'org.projectlombok:lombok'
+  testCompileOnly 'org.projectlombok:lombok'
+  testAnnotationProcessor 'org.projectlombok:lombok'
+
+  // JPA
+  implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+
+  // QueryDsl
+  implementation "com.querydsl:querydsl-jpa:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+  annotationProcessor "com.querydsl:querydsl-apt:${dependencyManagement.importedProperties['querydsl.version']}:jakarta"
+  testImplementation 'com.querydsl:querydsl-jpa'
+  testAnnotationProcessor 'com.querydsl:querydsl-apt'
+
+  // Postgres
+  runtimeOnly 'org.postgresql:postgresql'
+
+  // Redis
+  implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+  // Elasticsearch
+  implementation 'org.springframework.boot:spring-boot-starter-data-elasticsearch'
+
+  // Jakarta: JPA & QueryDsl
+  annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+  annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+  // RestDocs
+  testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+
+  // RestDocs OpenAPI
+  testImplementation "com.epages:restdocs-api-spec-mockmvc:0.19.1"
+
+  // Docker Compose
+  developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+
+  // Test Container
+  testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+  testImplementation 'org.testcontainers:junit-jupiter'
+  testImplementation 'org.testcontainers:postgresql'
+  testImplementation 'org.testcontainers:elasticsearch'
+  testImplementation "com.redis.testcontainers:testcontainers-redis-junit:1.6.4"
+
+  // SQL Logging spy
+  implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.1'
+
+  // FreshR
+  implementation "${group}:library-core-unit:1.0.0.RELEASE"
+  implementation "${group}:library-core-utils:1.0.0.RELEASE"
+  implementation "${group}:library-core-enumeration-mapper:1.0.0.RELEASE"
+  implementation "${group}:library-core-exceptions:1.0.0.RELEASE"
+  annotationProcessor "${group}:library-docs-search-docs:1.0.0.RELEASE"
+  testImplementation "${group}:library-docs-search-docs:1.0.0.RELEASE"
+
+  api "${group}:configure-extensions:1.0.0.RELEASE"
+  api "${group}:configure-jpa:1.0.0.RELEASE"
+  api "${group}:configure-redis:1.0.0.RELEASE"
+  api "${group}:configure-elasticsearch:1.0.0.RELEASE"
+  api "${group}:configure-webmvc:1.0.0.RELEASE"
+  api "${group}:configure-logstash:1.0.0.RELEASE"
+
+  api "${group}:extension-web:1.0.0.RELEASE"
+  api "${group}:extension-entity:1.0.0.RELEASE"
+  api "${group}:extension-auth:1.0.0.RELEASE"
+  api "${group}:extension-security:1.0.0.RELEASE"
+  api "${group}:extension-restdocs:1.0.0.RELEASE"
+
+  // Model Mapper: library-core-utils
+  implementation 'org.modelmapper:modelmapper:3.2.0'
+
+  // Jsoup: library-core-utils
+  implementation 'org.jsoup:jsoup:1.17.2'
+
+  // Web Annotation Processor: library-docs-search-docs
+  annotationProcessor 'org.springframework.boot:spring-boot-starter-web'
+
+  // Logback: configure-logstash
+  implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+}
+
+test {
+  outputs.dir snippetsDir
+  useJUnitPlatform()
+
+  dependsOn compileTestJava
+}
+
+openapi3 {
+  server = (
+          hasLength(System.getenv("GITHUB_GATEWAY"))
+                  ? (System.getenv("GITHUB_GATEWAY") + "/${servicePath}")
+                  : "http://localhost:50103/${servicePath}"
+  )
+  title = "Auth API Documentation"
+  description = "Auth REST Docs"
+  version = "${rootProject.version}"
+  format = "yaml"
+  outputDirectory = "build/resources/static"
+}
+
+postman {
+  baseUrl = (
+          hasLength(System.getenv("GITHUB_GATEWAY"))
+                  ? (System.getenv("GITHUB_GATEWAY") + "/${servicePath}")
+                  : "http://localhost:50103/${servicePath}"
+  )
+  title = 'Auth API Documentation'
+  version = "${rootProject.version}"
+  outputDirectory = "build/resources/static"
+}
+
+tasks.register("buildOas") {
+  copy {
+    from "${openapi3.outputDirectory}/openapi3.yaml"
+    into 'src/main/resources/static/'
+  }
+
+  copy {
+    from "${openapi3.outputDirectory}/postman-collection.json"
+    into 'src/main/resources/static/'
+  }
+
+  dependsOn("openapi3", "postman")
+}
+
+bootJar {
+  dependsOn buildOas
+}
+
+jib {
+  from {
+    image = 'openjdk:17-jdk-alpine'
+  }
+  to {
+    image = "${githubPackageContainer}/${githubOwner}/${rootProject.name}:" +
+            System.getenv("GITHUB_PROFILE") +
+            (hasLength(System.getenv("GITHUB_PROFILE")) ? "-" : "") +
+            "${version}"
+    auth {
+      username = System.getenv("GITHUB_ACTOR").toString()
+      password = System.getenv("GITHUB_TOKEN").toString()
+    }
+  }
+}
